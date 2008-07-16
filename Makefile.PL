@@ -1,4 +1,4 @@
-# $MirOS: contrib/hosted/p5/BSD/arc4random/Makefile.PL,v 1.6 2008/07/12 19:21:56 tg Exp $
+# $MirOS: contrib/hosted/p5/BSD/arc4random/Makefile.PL,v 1.7 2008/07/15 21:37:35 tg Exp $
 
 use 5.000;
 use ExtUtils::MakeMaker;
@@ -57,7 +57,7 @@ WriteMakefile(
 	    ABSTRACT_FROM	=> 'lib/BSD/arc4random.pm',
 	    AUTHOR		=> 'Thorsten Glaser <tg@mirbsd.de>'
 	) : ()),
-	LIBS			=> [''],
+	LIBS			=> $libs,
 	DEFINE			=> $defs,
 	INC			=> $incs,
 	OBJECT			=> $objs
