@@ -1,4 +1,4 @@
-# $MirOS: contrib/hosted/p5/BSD/arc4random/Makefile.PL,v 1.8 2008/07/20 15:08:37 tg Exp $
+# $MirOS: contrib/hosted/tg/code/BSD::arc4random/Makefile.PL,v 1.2 2009/07/16 12:24:28 tg Exp $
 
 use 5.000;
 use ExtUtils::MakeMaker;
@@ -13,7 +13,7 @@ my $objs = '';
 # do not override below for auto mode
 if ($cfg eq 'auto') {
 	# note order is important
-	if ($^O ne 'mirbsd') {
+	if ($^O ne 'mirbsd' && $^O ne 'cygwin') {
 		$defs = '-DHAVE_ARC4RANDOM_PUSHB=0';
 	}
 	if ($^O eq 'interix') {
@@ -23,11 +23,10 @@ if ($cfg eq 'auto') {
 	    ($^O eq 'gnukfreebsd') ||
 	    ($^O eq 'linux')) {
 		# Debian GNU/HURD, GNU/kFreeBSD, GNU/Linux
-		# use libbsd once in testing?
+		# either use libbsd (lenny and up):
 		#$incs = '-include /usr/include/bsd/bsd.h';
 		#$libs = '-lbsd';
-		# as of now, libbsd is not popular enough, need arc4random.c
-		# XXX the presence of arc4random.c here is a KLUDGE going away!
+		# or use the contributed arc4random.c file
 		$objs = 'arc4random.o';
 		$defs .= ' -DHAVE_SYS_SYSCTL_H=0 -DHAVE_STDINT_H=1';
 		$defs .= ' -DNEED_ARC4RANDOM_DECL';
@@ -38,9 +37,11 @@ if ($cfg eq 'auto') {
 		# XXX the presence of arc4random.c here is a KLUDGE going away!
 		# XXX Solaris 10 has <stdint.h> but Cygwin and Solaris 8 don't.
 		$objs = 'arc4random.o';
-		$defs .= ' -DHAVE_SYS_SYSCTL_H=0 -DHAVE_STDINT_H=0';
 		$defs .= ' -DNEED_ARC4RANDOM_DECL';
-		$defs .= ' -DUSE_INTTYPES -DREDEF_USCORETYPES';
+		if ($^O eq 'solaris') {
+			$defs .= ' -DHAVE_SYS_SYSCTL_H=0 -DHAVE_STDINT_H=0';
+			$defs .= ' -DUSE_INTTYPES -DREDEF_USCORETYPES';
+		}
 	}
 }
 

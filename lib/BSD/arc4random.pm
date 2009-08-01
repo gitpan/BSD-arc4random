@@ -1,6 +1,6 @@
-# $MirOS: contrib/hosted/p5/BSD/arc4random/lib/BSD/arc4random.pm,v 1.26 2008/07/20 15:27:54 tg Exp $
+# $MirOS: contrib/hosted/tg/code/BSD::arc4random/lib/BSD/arc4random.pm,v 1.4 2009/07/16 13:13:54 tg Exp $
 #-
-# Copyright (c) 2008
+# Copyright (c) 2008, 2009
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -20,7 +20,6 @@
 
 package BSD::arc4random;
 
-use 5.004_63;
 use strict;
 use warnings;
 use threads::shared;
@@ -29,7 +28,7 @@ BEGIN {
 	require Exporter;
 	require DynaLoader;
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION = 1.30;
+	$VERSION = "1.41";
 	@ISA = qw(Exporter DynaLoader);
 	@EXPORT = qw();
 	@EXPORT_OK = qw(
@@ -251,6 +250,8 @@ on some entropy returned from B<rand>'s previous state.
 
 =head2 LOW-LEVEL FUNCTIONS
 
+=over 4
+
 =item B<arc4random>()
 
 This function returns an unsigned 32-bit integer random value.
@@ -284,7 +285,11 @@ This constant function returns 1 if B<arc4random_pushb> and/or
 B<arc4random_pushk> actually call the kernel interfaces, 0 if
 they merely map to B<arc4random_addrandom> instead.
 
+=back
+
 =head2 HIGH-LEVEL FUNCTIONS
+
+=over 4
 
 =item B<arc4random_bytes>(I<num>[, I<pbuf>])
 
@@ -297,7 +302,11 @@ An optional I<pbuf> argument is passed to the system first.
 Calculate a uniformly distributed random number less than upper_bound
 avoiding "modulo bias".
 
+=back
+
 =head2 PACKAGE VARIABLES
+
+=over 4
 
 =item B<$RANDOM>
 
@@ -312,6 +321,8 @@ is the maximum number returned; if undefined, 0 or S<E<62>= 0xFFFFFFFF>,
 no bound is used, and values in the range S<[0; 2**32-1]> are returned.
 They will behave like B<$RANDOM>.
 
+=back
+
 =head1 AUTHOR
 
 Thorsten Glaser E<lt>tg@mirbsd.deE<gt>
@@ -319,13 +330,17 @@ Thorsten Glaser E<lt>tg@mirbsd.deE<gt>
 =head1 SEE ALSO
 
 The L<arc4random(3)> manual page, available online at:
-L<http://www.mirbsd.org/man/arc4random.3>
+L<https://www.mirbsd.org/man/arc4random.3>
 
 Perl's L<rand> and L<srand> functions via L<perlfunc> and L<perlfaq4>.
 
+The B<randex.pl> plugin for Irssi, implementing the MirOS RANDEX
+protocol (entropy exchange over IRC), with CVSweb at:
+L<http://cvs.mirbsd.de/ports/net/irssi/files/randex.pl>
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2008 Thorsten "mirabilos" Glaser
+Copyright (c) 2008, 2009 Thorsten "mirabilos" Glaser
 
 This module is covered by the MirOS Licence:
 L<http://mirbsd.de/MirOS-Licence>
