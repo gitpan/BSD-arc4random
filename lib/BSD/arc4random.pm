@@ -1,7 +1,9 @@
-# $MirOS: contrib/hosted/tg/code/BSD::arc4random/lib/BSD/arc4random.pm,v 1.4 2009/07/16 13:13:54 tg Exp $
+# $MirOS: contrib/hosted/tg/code/BSD::arc4random/lib/BSD/arc4random.pm,v 1.8 2009/11/29 15:52:55 tg Exp $
 #-
 # Copyright (c) 2008, 2009
 #	Thorsten Glaser <tg@mirbsd.org>
+# Copyright (c) 2009
+#	Benny Siegert <bsiegert@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
 # are retained or reproduced in an accompanying document, permission
@@ -22,13 +24,12 @@ package BSD::arc4random;
 
 use strict;
 use warnings;
-use threads::shared;
 
 BEGIN {
 	require Exporter;
 	require DynaLoader;
 	use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-	$VERSION = "1.41";
+	$VERSION = "1.43";
 	@ISA = qw(Exporter DynaLoader);
 	@EXPORT = qw();
 	@EXPORT_OK = qw(
@@ -49,9 +50,15 @@ BEGIN {
 use vars qw($RANDOM);		# public tied integer variable
 sub have_kintf() {}		# public constant function, prototyped
 
-
-# private thread lock
-my $arcfour_lock : shared;
+my $have_threadlock = 1;
+my $arcfour_lock;
+eval { require threads::shared; };
+if ($@) {
+	$have_threadlock = 0;	# module not available
+} else {
+	# private thread lock
+	threads::shared::share($arcfour_lock);
+};
 
 bootstrap BSD::arc4random $BSD::arc4random::VERSION;
 
@@ -59,7 +66,7 @@ bootstrap BSD::arc4random $BSD::arc4random::VERSION;
 sub
 arc4random()
 {
-	lock($arcfour_lock);
+	lock($arcfour_lock) if $have_threadlock;
 	return &arc4random_xs();
 }
 
@@ -68,7 +75,7 @@ arc4random_addrandom($)
 {
 	my $buf = shift;
 
-	lock($arcfour_lock);
+	lock($arcfour_lock) if $have_threadlock;
 	return &arc4random_addrandom_xs($buf);
 }
 
@@ -77,7 +84,7 @@ arc4random_pushb($)
 {
 	my $buf = shift;
 
-	lock($arcfour_lock);
+	lock($arcfour_lock) if $have_threadlock;
 	return &arc4random_pushb_xs($buf);
 }
 
@@ -86,14 +93,14 @@ arc4random_pushk($)
 {
 	my $buf = shift;
 
-	lock($arcfour_lock);
+	lock($arcfour_lock) if $have_threadlock;
 	return &arc4random_pushk_xs($buf);
 }
 
 sub
 arc4random_stir()
 {
-	lock($arcfour_lock);
+	lock($arcfour_lock) if $have_threadlock;
 	&arc4random_stir_xs();
 	return;
 }
@@ -272,6 +279,8 @@ returns an unsigned 32-bit integer random value from it.
 This function first pushes the I<pbuf> argument to the kernel if possible,
 then returns an unsigned 32-bit integer random value from the kernel.
 
+This function is deprecated. Use B<arc4random_pushb> instead.
+
 =item B<arc4random_stir>()
 
 This procedure attempts to retrieve new entropy from the kernel and add
@@ -338,9 +347,12 @@ The B<randex.pl> plugin for Irssi, implementing the MirOS RANDEX
 protocol (entropy exchange over IRC), with CVSweb at:
 L<http://cvs.mirbsd.de/ports/net/irssi/files/randex.pl>
 
+L<https://www.mirbsd.org/a4rp5bsd.htm> when it's done being written.
+
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (c) 2008, 2009 Thorsten "mirabilos" Glaser
+Copyright (c) 2009 Benny Siegert
 
 This module is covered by the MirOS Licence:
 L<http://mirbsd.de/MirOS-Licence>
