@@ -1,6 +1,6 @@
-# $MirOS: contrib/hosted/tg/code/BSD::arc4random/t/check.t,v 1.2 2009/09/08 16:43:02 tg Exp $
+# $MirOS: contrib/hosted/tg/code/BSD::arc4random/t/check.t,v 1.4 2011/06/05 23:12:09 tg Exp $
 #-
-# Copyright (c) 2008
+# Copyright (c) 2008, 2011
 #	Thorsten Glaser <tg@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -18,7 +18,7 @@
 # damage or existence of a defect, except proven that it results out
 # of said person's immediate fault when using the work as intended.
 
-print "1..12\n";
+print "1..23\n";
 
 use BSD::arc4random qw(:all);
 
@@ -69,3 +69,47 @@ print "not " if ($enta == $entb);
 print "ok 11\n";
 print "not " if (($enta == 123) && ($entb == 456));
 print "ok 12\n";
+
+sub timed_out {
+	die "GOT TIRED OF WAITING";
+}
+$SIG{ALRM} = \&timed_out;
+eval {
+	alarm(10);
+
+	# test arc4random_uniform lower half
+	$enta = arc4random_uniform(10000);
+	$entb = arc4random_uniform(10000);
+	print "not " unless $enta =~ /^[0-9]+$/;
+	print "ok 13\n";
+	print "not " unless $entb =~ /^[0-9]+$/;
+	print "ok 14\n";
+	print "not " if (($enta < 0) || ($enta > 9999));
+	print "ok 15\n";
+	print "not " if (($entb < 0) || ($entb > 9999));
+	print "ok 16\n";
+	print "not " if ($enta == $entb);
+	print "ok 17\n";
+	# test arc4random_uniform upper half
+	$enta = arc4random_uniform(2999999901);
+	$entb = arc4random_uniform(2999999901);
+	print "not " unless $enta =~ /^[0-9]+$/;
+	print "ok 18\n";
+	print "not " unless $entb =~ /^[0-9]+$/;
+	print "ok 19\n";
+	print "not " if (($enta < 0) || ($enta > 2999999900));
+	print "ok 20\n";
+	print "not " if (($entb < 0) || ($entb > 2999999900));
+	print "ok 21\n";
+	print "not " if ($enta == $entb);
+	print "ok 22\n";
+
+	alarm(0);
+};
+if ($@ =~ /GOT TIRED OF WAITING/) {
+	print STDERR "DIAG: 10 second timeout on execution reached\n";
+	print STDERR "DIAG: this is probably a bug wrt. use64bitint\n";
+	print "not ok 23\n";
+} else {
+	print "ok 23\n";
+}

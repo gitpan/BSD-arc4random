@@ -1,5 +1,5 @@
 static const char __vcsid[] = "@(#) MirOS contributed arc4random.c (old)"
-    "\n	@(#)rcsid_master: $MirOS: contrib/code/Snippets/arc4random.c,v 1.23 2009/11/29 15:29:24 tg Exp $"
+    "\n	@(#)rcsid_master: $MirOS: contrib/code/Snippets/arc4random.c,v 1.28 2010/09/12 12:24:27 tg Exp $"
     ;
 
 /*-
@@ -32,7 +32,7 @@ static const char __vcsid[] = "@(#) MirOS contributed arc4random.c (old)"
  */
 
 /*-
- * Copyright (c) 2008, 2009
+ * Copyright (c) 2008, 2009, 2010
  *	Thorsten Glaser <tg@mirbsd.org>
  * This is arc4random(3) made more portable,
  * as well as arc4random_pushb(3) for Cygwin.
@@ -124,7 +124,7 @@ static char arc4_writeback(uint8_t *, size_t, char);
 u_int32_t arc4random(void);
 void arc4random_addrandom(u_char *, int);
 void arc4random_stir(void);
-#ifdef USE_MS_CRYPTOAPI
+#if defined(USE_MS_CRYPTOAPI) || defined(OPPORTUNISTIC_ROOT_PUSHB)
 uint32_t arc4random_pushb(const void *, size_t);
 #endif
 #endif
@@ -166,6 +166,7 @@ arc4_addrandom(const u_char *dat, size_t datlen)
 		arc4_ctx.s[arc4_ctx.i] = arc4_ctx.s[arc4_ctx.j];
 		arc4_ctx.s[arc4_ctx.j] = si;
 	}
+	arc4_ctx.i++;
 	arc4_ctx.j = arc4_ctx.i;
 }
 
@@ -277,8 +278,8 @@ stir_finish(uint8_t av)
 	av &= 0x0FU;
 	while (n--)
 		arc4_getbyte();
-	while (n < sizeof(tb))
-		tb[n++] = arc4_getbyte();
+	while (++n < sizeof(tb))
+		tb[n] = arc4_getbyte();
 	if (arc4_writeback(tb, sizeof(tb), 0))
 		arc4_getbyte();
 	while (av--)
@@ -481,7 +482,8 @@ arc4_writeback(uint8_t *buf, size_t len, char do_rd)
 #endif
 }
 
-#if defined(USE_MS_CRYPTOAPI) || defined(arc4random_pushk)
+#if defined(USE_MS_CRYPTOAPI) || defined(arc4random_pushk) || \
+    defined(OPPORTUNISTIC_ROOT_PUSHB)
 uint32_t
 arc4random_pushb(const void *src, size_t len)
 {
@@ -565,54 +567,56 @@ arc4random_buf(void *_buf, size_t n)
 	}
 }
 
-/*
- * Calculate a uniformly distributed random number less than upper_bound
- * avoiding "modulo bias".
- *
- * Uniformity is achieved by generating new random numbers until the one
- * returned is outside the range [0, 2**32 % upper_bound).  This
- * guarantees the selected random number will be inside
- * [2**32 % upper_bound, 2**32) which maps back to [0, upper_bound)
- * after reduction modulo upper_bound.
+/*-
+ * Written by Damien Miller.
+ * With simplifications by Jinmei Tatuya.
  */
-u_int32_t
-arc4random_uniform(u_int32_t upper_bound)
+
+/*
+ * Calculate a uniformly distributed random number less than
+ * upper_bound avoiding "modulo bias".
+ *
+ * Uniformity is achieved by generating new random numbers
+ * until the one returned is outside the range
+ * [0, 2^32 % upper_bound[. This guarantees the selected
+ * random number will be inside the range
+ * [2^32 % upper_bound, 2^32[ which maps back to
+ * [0, upper_bound[ after reduction modulo upper_bound.
+ */
+uint32_t
+arc4random_uniform(uint32_t upper_bound)
 {
-	u_int32_t r, min;
+	uint32_t r, min;
 
 	if (upper_bound < 2)
 		return (0);
 
-#if defined(ULONG_MAX) && (ULONG_MAX > 0xffffffffUL)
+#if defined(ULONG_MAX) && (ULONG_MAX > 0xFFFFFFFFUL)
 	min = 0x100000000UL % upper_bound;
 #else
-	/* Calculate (2**32 % upper_bound) avoiding 64-bit math */
-	if (upper_bound > 0x80000000)
-		min = 1 + ~upper_bound;		/* 2**32 - upper_bound */
-	else {
-		/* (2**32 - (x * 2)) % x == 2**32 % x when x <= 2**31 */
-		min = ((0xffffffff - (upper_bound * 2)) + 1) % upper_bound;
-	}
+	/* calculate (2^32 % upper_bound) avoiding 64-bit math */
+	if (upper_bound > 0x80000000U)
+		/* 2^32 - upper_bound (only one "value area") */
+		min = 1 + ~upper_bound;
+	else
+		/* ((2^32 - x) % x) == (2^32 % x) when x <= 2^31 */
+		min = (0xFFFFFFFFU - upper_bound + 1) % upper_bound;
 #endif
 
 	/*
 	 * This could theoretically loop forever but each retry has
 	 * p > 0.5 (worst case, usually far better) of selecting a
 	 * number inside the range we need, so it should rarely need
-	 * to re-roll.
+	 * to re-roll (at all).
 	 */
-	if (!rs_initialized || arc4_stir_pid != getpid())
+	arc4_count -= 4;
+	if (!rs_initialized || arc4_stir_pid != getpid() || arc4_count <= 0)
 		arc4random_stir();
 	if (arc4_getbyte() & 1)
 		(void)arc4_getbyte();
-	for (;;) {
-		arc4_count -= 4;
-		if (arc4_count <= 0)
-			arc4random_stir();
+	do {
 		r = arc4_getword();
-		if (r >= min)
-			break;
-	}
+	} while (r < min);
 
 	return (r % upper_bound);
 }
